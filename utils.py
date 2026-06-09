@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+import requests
+import uuid
+import sys
+import re
+import builtins
+
+
+def downloadImageFromUrl(url, path):
+    if not url.startswith('http'):
+        return None
+    img_data = requests.get(url, timeout=(5, 10)).content
+    fPath = path + '/' + str(uuid.uuid1()) + '.jpg'
+    with open(fPath, 'wb') as handler:
+        handler.write(img_data)
+    return fPath
+
+
+def print(ftext, **args):
+    if sys.stdout.isatty():
+        builtins.print(ftext, flush=True, **args)
+    else:
+        ansi_escape = re.compile(r'\x1b\[\d+m')
+        builtins.print(ansi_escape.sub(' ', ftext), flush=True, **args)
