@@ -230,7 +230,7 @@ if args.shorten:
 def banner():
     with open(META_FILE, 'r') as metadata:
         json_data = json.loads(metadata.read())
-        grup-buyer_url = json_data['grup_whatsap']
+        grup_whatsap_url = json_data['grup_whatsap']
         comms_url = json_data['comms']
 
     art = r"""
